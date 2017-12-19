@@ -1,0 +1,42 @@
+containers:
+
+    base:
+        setup:
+        - !Alpine v3.7
+        - !Install [python3, nginx]
+        - !Py3Requirements ./requirements.txt
+        - !EnsureDir /work/static_pages
+        - !EnsureDir /work/database
+        volumes:
+            /work/static_pages: !Persistent 'static_pages'
+            /work/database: !Tmpfs
+                size: 1G
+                mode: 777
+
+    freeze_requirements:
+        setup:
+        - !Alpine v3.7
+        - !Install [py-pip]
+        - !PipConfig {dependencies: true}
+        - !Sh pip install -r ./requirements.txt
+        - !Sh pip freeze > ./requirements.txt
+
+commands:
+
+    run: !Supervise
+        description: Run all required services
+        children:
+            python: &app !Command
+                container: base
+                run: python3 make_db.py && flask run -p 5001
+                environ:
+                    FLASK_APP: app.py
+            # nginx: &nginx-dev !Command
+            #     description: Run nginx server
+            #     container: base
+            #     _expose-ports: [8000]
+            #     run: nginx -c /work/nginx.conf
+
+    freeze-deps: !Command
+        container: freeze_requirements
+        run: ':'

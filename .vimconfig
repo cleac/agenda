@@ -1,0 +1,1 @@
+let g:neomake_python_flake8_exe = 'flake8-3'
